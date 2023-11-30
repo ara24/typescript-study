@@ -3,12 +3,18 @@
 ## 목차
 
 - [1. 소개](#1-소개)
-- [2.0 타입스크립트 개요](#20-타입스크립트-개요)
-- [2.1 암시적 타입 vs 명시적 타입](#21-암시적-타입-vs-명시적-타입)
-- [2.2 Typescript의 타입 part1(type 할당 방법, Alias, return 타입 지정)](#22-typescript의-타입-part1)
-- [2.3 Typescript의 타입 part2(readonly, Tuple, any)](#23-typescript의-타입-part2)
-- [2.4 Typescript의 타입 part3(unknown, void, never)](#24-typescript의-타입-part3)
--
+- 개요
+  - [2.0 타입스크립트 개요](#20-타입스크립트-개요)
+  - [2.1 암시적 타입 vs 명시적 타입](#21-암시적-타입-vs-명시적-타입)
+  - [2.2 Typescript의 타입 part1(type 할당 방법, Alias, return 타입 지정)](#22-typescript의-타입-part1)
+  - [2.3 Typescript의 타입 part2(readonly, Tuple, any)](#23-typescript의-타입-part2)
+  - [2.4 Typescript의 타입 part3(unknown, void, never)](#24-typescript의-타입-part3)
+- 함수
+  - [3.0 콜 시그니처(Call Signatures)](#30-콜-시그니처call-signatures)
+  - [3.1 오버로딩(Overloading)](#31-오버로딩overloading)
+  - [3.2 다형성(Polymorphism)](#32-다형성polymorphism)
+  - [3.3 제네릭 이해하기](#33-제네릭-이해하기)
+  - [3.4 제네릭 사용 사례](#34-제네릭-사용-사례)
 
 ## 1. 소개
 
@@ -561,3 +567,407 @@ never는 예외를 발생하는 함수나 실행되면 안되는 코드에서 �
 
 가장 많이 사용하게 될 것 같은 건 void, 그 다음을 unknown이다.  
 never는 거의 사용하지 않을 것이지만 알아두는 게 좋다. 마우스를 올렸을 때 보게 될 수 있기 때문이다.
+
+## 3.0 콜 시그니처(Call Signatures)
+
+함수를 어떻게 호출해야할 지 알려주는 정보다. 인자(arguments)의 타입과 리턴 타입을 알려준다.  
+함수에 마우스 올리면 볼 수 있다.
+
+```tsx
+const add = (a: number, b: number) => a + b;
+// 콜 시그니처: const add: (a: number, b: number) => number
+```
+
+함수의 call signature 타입을 만드는 방법
+
+```tsx
+type Add = (a: number, b: number) => number;
+
+const add: Add = (a, b) => a + b;
+```
+
+함수를 구현하기 전에 함수가 어떻게 작동하는지 서술해 둘 수 있다.  
+코드를 구현하면서 타입을 선언하지 않아도 된다.
+
+콜 시그니처를 작성하고 함수를 만들면, 타입스크립트가 타입 정보를 알고있기 때문에 매개변수나 리턴 타입이 잘못되었을 때 알려준다.
+
+```tsx
+type Add = (a: number, b: number) => number;
+
+const add: Add = (a, b) => {
+  a + b;
+}; // 에러
+```
+
+Error in code
+
+- Type '(a: number, b: number) => void' is not assignable to type 'Add'. Type 'void' is not assignable to type 'number'.
+
+## 3.1 오버로딩(Overloading)
+
+오버로딩은 함수가 서로 다른 여러 개의 시그니처를 가지고 있는 것이다.  
+직접 작성하는 경우는 많지 않을 것인데, 우리가 많이 사용하는 라이브러리들에서 오버로딩을 많이 사용한다.
+
+콜 시그니처 작성 방법
+
+```tsx
+// 방법 1
+type Add = (a: number, b: number) => number;
+
+// 방법 2
+type Add = {
+  (a: number, b: number): number;
+};
+```
+
+방법 1은 간단하게 만드는 방법이다.
+방법 2처럼 길게 작성할 수도 있는데, 이 방법은 오버로딩 때문에 존재한다.
+
+### 오버로딩 예시 1(parameters 타입이 다른 경우)
+
+next.js에서 Router의 push 메소드에는 string을 넘길 수도 있고, object 넘길 수도 있다. 둘다 동작한다.
+
+```tsx
+// next.js
+Router.push("/home");
+
+Router.push({
+  path: "/home",
+  state: 1,
+});
+```
+
+push는 다음과 같이 구성되어있을 것이다.
+
+```tsx
+type Config = {
+  path: string;
+  state: object;
+};
+type Push = {
+  (path: string): void;
+  (oconfig: Config): void;
+};
+
+const push: Push = (config) => {
+  if (typeof config === "string") console.log(config);
+  else {
+    console.log(config.path);
+  }
+};
+```
+
+오버로딩은 패키지나 라이브러리를 디자인할 때 유용하게 사용된다.
+
+### 오버로딩 예시 2(parameters 개수가 다른 경우)
+
+```tsx
+type Add = {
+  (a: number, b: number): number;
+  (a: number, b: number, c: number): number;
+};
+
+const add: Add = (a, b, c) => {
+  // 에러
+  return a + b;
+};
+```
+
+Error in code
+
+- Type '(a: number, b: number, c: number) => number' is not assignable to type 'Add'. Target signature provides too few arguments. Expected 3 or more, but got 2.
+
+에러나지 않도록 수정
+
+```tsx
+type Add = {
+  (a: number, b: number): number;
+  (a: number, b: number, c: number): number;
+};
+
+const add: Add = (a, b, c?: number) => {
+  if (c) return a + b + c;
+  return a + b;
+};
+
+add(1, 2);
+add(1, 2, 3);
+```
+
+Add의 콜 시그니쳐가 의미하는 바는 c는 옵셔널이라는 것이다.  
+add의 세 번째 인자를 옵셔널로 변경하고 타입을 지정해줘야 한다. `c?: number`  
+c가 있을 때의 처리를 해준다. `if(c) return a + b + c;`
+
+## 3.2 다형성(Polymorphism)
+
+poly는 many, multi라는 뜻이고, morphos는 form, structure를 뜻한다.  
+Polymorphism은 다양한 형태를 말한다.
+
+배열의 값을 프린트해주는 함수를 만든다면, 배열에는 다양한 타입이 올 수 있다.
+
+```tsx
+type SuperPrint = {
+  (arr: number[]): void;
+  (arr: boolean[]): void;
+  (arr: string[]): void;
+};
+
+const superPrint: SuperPrint = (arr) => {
+  arr.forEach((i) => console.log(i));
+};
+
+superPrint([1, 2, 3, 4]);
+superPrint([true, false, true]);
+superPrint(["a", "b", "c"]);
+```
+
+위 코드도 잘 동작하지만 다양한 상황에서 사용하려면 콜 시그니처레 모든 가능성을 추가해 놓아야 한다.  
+ex) `superPrint([1, 2, true, false])`를 실행하려면 콜 시그니처에 `(arr: (number|boolean)[]): void`를 추가해야 한다.
+
+다형성을 활용하는 더 좋은 방법이 있다. generic을 사용하는 것이다.  
+제너릭이란 타입의 placeholder 같은 것이다.
+
+콜 시그니처를 작성할 때 확실한 타입을 모른다면 타입스크립트가 타입을 유추하도록 한다.
+
+```tsx
+type SuperPrint = {
+  <TypePlaceholder>(arr: TypePlaceholder[]): void;
+};
+
+const superPrint: SuperPrint = (arr) => {
+  arr.forEach((i) => console.log(i));
+};
+
+superPrint([1, 2, 3, 4]); // 콜 시그니처: const superPrint: <number>(arr: number[]) => void
+superPrint([true, false, true]); // 콜 시그니처: const superPrint: <boolean>(arr: boolean[]) => void
+superPrint(["a", "b", "c"]); // 콜 시그니처: const superPrint: <string>(arr: string[]) => void
+superPrint([1, 2, true, false]); // 콜 시그니처: const superPrint: <number | boolean>(arr: (number | boolean)[]) => void
+```
+
+타입스크립트는 함수 실행 라인에서 배열의 타입을 확인한다.  
+superPrint의 콜 시그니처에서 TypePlaceholder는 타입스크립트가 유추한 타입으로 바뀐다.
+
+이게 제네릭의 핵심이다.  
+**콜 시그니처에 타입을 일일이 써주지 않아도 함수에 여러 타입을 사용하는 것을 허용한다.**
+
+return 타입에도 적용해보자.
+
+```tsx
+type SuperPring = {
+  <TypePlaceholder>(arr: TypePlaceholder[]): TypePlaceholder;
+};
+
+const superPrint: SuperPring = (arr) => arr[0];
+
+const a = superPrint([1, 2, 3, 4]);
+const b = superPrint([true, false, true]);
+const c = superPrint(["a", "b", "c"]);
+const d = superPrint([1, 2, true, false, "hello"]); // 여기!
+```
+
+맨 마지막 줄에서 superPrint의 콜 시그니처는 `const superPrint: <string | number | boolean>(arr: (string | number | boolean)[]) => string | number | boolean` 이다.  
+d의 타입은 `string | number | boolean` 로 추론된다.
+
+TypePlaceholder 대신에 무엇이든 올 수 있지만 주로 T를 사용한다.
+
+### 정리
+
+`type SuperPring = {<T>(arr: T[]): T}` 코드 설명
+
+- 콜 시그니처에 제네릭을 사용해서 타입스트립트가 타입을 유추하도록 한다.
+- 유추한 타입의 배열이 인자로 들어올 것이고, 그 타입 중 하나를 리턴하도록 한다.
+
+## 3.3 제네릭 이해하기
+
+함수 시그니처에 다양한 타입을 사용하고 싶다면 any로 해도 되는 것 아닐까?
+→ any를 사용하면 타입스크립트의 보호장치를 사용할 수 없다.
+
+```tsx
+type SuperPrint = (arr: any[]) => any;
+
+const superPrint: SuperPrint = (arr) => arr[0];
+
+const d = superPrint([1, 2, true, false, "hello"]);
+
+d.toUpperCase(); // 에러 없음
+```
+
+d는 number 타입이고, toUpperCase()는 number 타입에서 사용할 수 없어서 런타임 환경에서 에러가 발생할 수 있는 코드이다. any를 사용했기 때문에 타입스크립트가 동작하지 않는다.
+
+제네릭을 사용하려면 any를 T로 변경하고, 콜 시그니처 맨 앞에 <T>를 써준다.
+
+```tsx
+type SuperPrint = <T>(arr: T[]) => T;
+
+const superPrint: SuperPrint = (arr) => arr[0];
+
+const d = superPrint([1, 2, true, false, "hello"]);
+
+d.toUpperCase(); // 에러
+```
+
+타입스크립트가 `d.toUpperCase()` 코드를 허용해주지 않는다.
+
+Error in code
+
+- Property 'toUpperCase' does not exist on type 'string | number | boolean'. Property 'toUpperCase' does not exist on type 'number'.
+
+제네릭은 내가 요구한대로 signature를 만들어 준다. 다양한 타입의 시그니처를 내가 일일이 작성할 필요가 없다.
+
+타입스크립트는 제네릭이 처음 사용되는 지점을 기반으로 타입이 무엇인지 알게 된다.
+
+```tsx
+type SuperPrint = <T, M>(a: T[], b: M) => T;
+
+const superPrint: SuperPrint = (arr) => arr[0];
+
+const d = superPrint([1, 2, 3, 4], "x");
+```
+
+위 함수가 실행되는 시점에 a로 들어온 배열의 타입이 T가 되고, b로 들어온 값의 타입이 M이 된다.  
+superPrint의 콜 시그니처는 `const superPrint: <number, string>(a: number[], b: string) => number`가 된다.  
+맨 앞에 있는 `<T, M>`은 제네릭의 이름을 알려주는 부분이다.
+
+## 정리
+
+타입스크립트는 우리의 요구에 따라 call signature를 생성한다.  
+우리는 generic으로 원하는 signature를 알려주기만 하면 된다.
+
+## 3.4 제네릭 사용 사례
+
+다른 라이브러리를 사용할 때 제네릭을 사용한다. next.js, react를 한다면 제네릭을 사용하게 될 것이다.  
+함수의 콜 시그니처 외에 제네릭을 사용되는 곳을 알아보자.
+
+### 함수 작성 시, 제네릭 사용
+
+```tsx
+// type SuperPrint = <T,M>(a: T[], b: M) => T
+// const superPrint: SuperPrint = (arr) => arr[0]
+
+// 위 코드 대신에 함수에 제네릭 사용
+function superPrint<T>(arr: T[]) {
+  return arr[0];
+}
+
+const d = superPrint([1, 2, 3, 4]);
+```
+
+### 제네릭 타입 오버라이딩(타입스크립트에 타입 명시)
+
+```tsx
+function superPrint<T>(arr: T[]) {
+  return arr[0];
+}
+
+const d = superPrint<boolean>([1, 2, 3, 4]);
+```
+
+타입을 명시하는 것은 좋지 않은 방법이다. 타입스크립트가 유추하도록 하는 것이 제일 좋다.  
+위 코드처럼 `<boolean>` 으로 타입을 명시하면, `<T>` 에 적용되어서 인자가 `(arr: boolean[])` 가 된다.
+
+### 타입 확장
+
+타입을 생성하고 그 타입을 또다른 타입에 넣어서 사용할 수 있다.
+
+```tsx
+type Player<E> = {
+	name: string
+	extraInfo: E
+}
+
+const ara: Player<{favFood: string}> = {
+	name: 'ara'
+	extraInfo: {
+		favFood: 'kimbab'
+	}
+}
+```
+
+```tsx
+type Player<E> = {
+	name: string
+	extraInfo: E
+}
+
+type AraPlayer = Player<{favFood: string}> // 타입 분리
+
+const ara: AraPlayer> = {
+	name: 'ara'
+	extraInfo: {
+		favFood: 'kimbab'
+	}
+}
+```
+
+```tsx
+type Player<E> = {
+	name: string
+	extraInfo: E
+}
+
+type AraExtra = {favFood: string} // 타입 분리
+type AraPlayer = Player<AraExtra>
+
+const ara: AraPlayer> = {
+	name: 'ara'
+	extraInfo: {
+		favFood: 'kimbab'
+	}
+}
+```
+
+### 타입 재사용
+
+많은 것들이 들어있는 타입을 하나 가지고 있고, 그 중 하나가 달라질 수 있는 타입이라면 제네릭을 사용하면 된다. 그러면 재사용 할 수 있다.
+
+```tsx
+type Player<E> = {
+	name: string
+	extraInfo: E
+}
+
+type AraExtra = {favFood: string}
+type AraPlayer = Player<AraExtra>
+
+const ara: AraPlayer> = {
+	name: 'ara'
+	extraInfo: {
+		favFood: 'kimbab'
+	}
+}
+
+const mara: Player<null> = { // Player 재사용
+	name: 'mara',
+	extraInfo: null
+}
+```
+
+### 배열에서 사용
+
+제네릭을 배열에서도 사용할 수 있다.  
+vscode에서 ts파일을 만들고, Array를 입력하면 툴팁에 Array<T>가 보인다.  
+typescript에서 Array를 생성할 때 제네릭을 받고 있음을 알 수 있다.
+
+```tsx
+type a = Array<number>;
+
+let a: A = [1, 2, 3, 4];
+```
+
+`Array<number>` 이런 형태의 제네릭을 많이 볼 것이다.  
+이것도 제네릭을 사용하는 방법이다.
+
+```tsx
+function printAllNumbers(arr: Array<number>) {}
+```
+
+arr이 number 배열임을 나타낼 때 `number[]`를 사용하기도 하지만 `Array<number>` 를 사용하기도 한다.
+
+### React에서 사용
+
+React에서 useState 함수는 제네릭을 받는다.  
+아래 코드처럼 제네릭을 넣어주면 state는 number 타입이 된다.
+
+```tsx
+useState<number>();
+```
