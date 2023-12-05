@@ -15,6 +15,13 @@
   - [3.2 다형성(Polymorphism)](#32-다형성polymorphism)
   - [3.3 제네릭 이해하기](#33-제네릭-이해하기)
   - [3.4 제네릭 사용 사례](#34-제네릭-사용-사례)
+- 클래스와 인터페이스
+  - [4.0 클래스](#40-클래스)
+  - [4.1 클래스 연습(해싱 알고리즘을 쓰는 해시맵 사전 만들기)](#41-클래스-연습해싱-알고리즘을-쓰는-해시맵-사전-만들기)
+  - [4.2 인터페이스](#42-인터페이스)
+  - [4.3 추살 클래스와 인터페이스](#43-추상-클래스와-인터페이스)
+  - [4.4 인터페이스와 타입 그리고 인터페이스와 클래스](#44-인터페이스와-타입-그리고-인터페이스와-클래스)
+  - [4.5 다형성(제네릭, 다형성, 인터페이스 합치기)](#45-다형성제네릭-다형성-인터페이스-합치기)
 
 ## 1. 소개
 
@@ -929,7 +936,7 @@ type Player<E> = {
 type AraExtra = {favFood: string}
 type AraPlayer = Player<AraExtra>
 
-const ara: AraPlayer> = {
+const ara: AraPlayer = {
 	name: 'ara'
 	extraInfo: {
 		favFood: 'kimbab'
@@ -971,3 +978,745 @@ React에서 useState 함수는 제네릭을 받는다.
 ```tsx
 useState<number>();
 ```
+
+## 4.0 클래스
+
+javascript에서는 class를 만들고 constructor() 함수에서 받은 입력값들은 this에 추가해야 한다.  
+ex) this.firstname = firstname; this.lastname = lastname;
+
+typescript에서는 생성자 함수에 입력된 값들을 일일이 this에 추가하지 않아도 된다.
+
+```tsx
+// typescript
+class Player {
+  constructor(private firstName: string, private lastName: string) {}
+}
+```
+
+typescript로 위의 코드를 작성하면, 아래와 같이 javascript로 변환된다.
+
+```tsx
+"use strict";
+class Player {
+  constructor(firstName, lastName) {
+    this.firstName = firstName;
+    this.lastName = lastName;
+  }
+}
+```
+
+typescript에서는 private과 public property를 만들 수 있다. private 키워드는 typescript가 개발자를 보호해주기 위해서 사용하는 것이고, javascript에서는 사용되지 않는다.
+
+private property를 클래스 외부에서 사용하려고 하면 타입스크립트가 허용하지 않는다.
+
+```tsx
+class Player {
+  constructor(
+    private firstName: string,
+    private lastnme: string,
+    public nickname: string
+  ) {}
+}
+
+const ara = new Player("ara", "kim", "김아라");
+
+ara.firstName; // 에러: Property 'firstName' is private and only accessible within class 'Player'.
+```
+
+### 추상 클래스
+
+Typescript와 객체지향 프로그램이 가지고 있는 엄청 훌륭한 것은 추상클래스다.  
+추상 클래스는 다른 클래스가 상속받을 수 있는 클래스다.
+
+```tsx
+abstract class User {
+  constructor(
+    private firstName: string,
+    private lastNamme: string,
+    public nickname: string
+  ) {}
+}
+
+class Player extends User {}
+
+const ara = new Player("ara", "kim", "김아라");
+```
+
+User 클래스는 직접 새로운 인스턴스를 만들 수는 없다.  
+추상 클래스는 오직 다른곳에서 상속받을수만 있는 클래스다.
+
+```tsx
+const ara = new User("ara", "kim", "김아라"); // 에러
+```
+
+Errors in code
+
+- Cannot create an instance of an abstract class.
+
+### 추상 클래스 안에 있는 메소드
+
+추상클래스 안에 있는 메소드는 상속받은 클래스의 인스턴스에서 사용할 수 있다.  
+private으로 설정한다면 인스턴스에서 메소드 호출 시, 타입스크립트에서 에러가 발생한다.
+
+```tsx
+abstract class User {
+  constructor(
+    private firstName: string,
+    private lastNamme: string,
+    public nickname: string
+  ) {}
+
+  getFullName() {
+    return `%{this.firstName} ${this.lastNamme}`;
+  }
+}
+
+class Player extends User {}
+
+const ara = new Player("ara", "kim", "김아라");
+ara.getFullName(); //
+```
+
+### 추상 메소드
+
+메소드를 클래스 안에 구현하지 않아도 된다.  
+추상 메소드를 구현하려면 메소드를 구현하지 않고 call signature만 작성해야한다.
+
+```tsx
+// 추상 클래스
+abstract class User {
+  constructor(
+    private firstName: string,
+    private lastNamme: string,
+    private nickname: string
+  ) {}
+  abstract getNickName(): void; // 추상 메소드
+  getFullName() {
+    // 추상 클래스 안에 있는 메소드
+    return `%{this.firstName} ${this.lastNamme}`;
+  }
+}
+
+class Player extends User {
+  // 에러
+}
+
+const ara = new Player("ara", "kim", "김아라");
+ara.getFullName();
+```
+
+Errors in Code
+
+- Non-abstract class 'Player' does not implement inherited abstract member 'getNickName' from class 'User'.
+
+추상 메소드를 정의하고, 인스턴스에서 구현하지 않으면 에러가 난다.  
+추상 메소드는 추상 클래스를 상속받으면 꼭 구현해야하는 메소드다.
+
+### protected property
+
+상속받은 클래스에서 해당 메소드를 구현할 때, 상속받은 클래스의 프로퍼티를 사용하고싶을 수 있다. 이 때 프로퍼티가 private이면 상속받은 클래스에서 프로퍼티를 사용할 수 없다.
+
+이 때 사용하는 것이 protected다.
+
+프로퍼티가 protected이면 외부의 직접 접근은 막고, 자식 클래스에서는 사용할 수 있게 해준다.
+
+```tsx
+abstract class User {
+  constructor(
+    protected firstName: string, //
+    protected lastNamme: string, //
+    protected nickname: string //
+  ) {}
+  abstract getNickName(): void;
+  getFullName() {
+    return `%{this.firstName} ${this.lastNamme}`;
+  }
+}
+
+class Player extends User {
+  getNickName() {
+    console.log(this.nickname); // protected property 접근 가능
+  }
+}
+
+const ara = new Player("ara", "kim", "김아라");
+ara.getFullName();
+ara.nickname; // protected proptery 접근 불가
+```
+
+## 4.1 클래스 연습(해싱 알고리즘을 쓰는 해시맵 사전 만들기)
+
+Dict(딕셔너리) 클래스를 만들고 words라는 프로퍼티를 만든다.  
+키를 string 으로 받는 Words라는 타입을 만들어서 words의 타입으로 지정한다.
+
+```tsx
+type Words = {
+  [key: string]: string;
+};
+
+class Dict {
+  private words: Words; // 에러: Property 'words' has no initializer and is not definitely assigned in the constructor.
+  constructor() {}
+}
+```
+
+words에서 초기화되지 않았다는 에러가 발생한다.  
+constructor() 안에서 `this.words = {}` 를 입력해서 초기값을 할당을 한다.
+
+아래 코드와 같이 지정해주는 방법도 있지만, constructor에서 words를 받고싶은게 아니라서 위 코드처럼 작성해준다.
+
+```tsx
+// typescript
+class Dict {
+  constructor(words) {
+    // 생성자 함수에 입력값을 받는 경우에 사용
+    this.words = words;
+  }
+}
+```
+
+Word 클래스를 만든다.
+
+```tsx
+class Word {
+  constructor(public term: string, public def: string) {}
+}
+
+const kimchi = new Word("kimchi", "한국의음식");
+```
+
+Dict 클래스에 add, def 메소드를 추가한다.  
+Dict 인스턴스인 dict에서 add 메소드를 사용해서 단어를 추가하고, def 메소드를 실행해서 단어의 정의를 출력한다.
+
+```tsx
+type Words = {
+  [key: string]: string;
+};
+
+class Dict {
+  private words: Words;
+  constructor() {
+    this.words = {};
+  }
+
+  add(word: Word) {
+    //
+    const { term, def } = word;
+    if (this.words[term] === undefined) {
+      this.words[term] = def;
+    }
+  }
+  def(term: string) {
+    //
+    return this.words[term];
+  }
+}
+
+class Word {
+  constructor(public term: string, public def: string) {}
+}
+
+const kimchi = new Word("kimchi", "한국의음식");
+
+const dict = new Dict(); //
+dict.add(kimchi); //
+dict.def("kimchi"); //
+```
+
+### 정리
+
+- 객체 타입을 지정할 때, key에 이름을 입력하는 대신에 타입을 지정할 수 있다.
+  `type Words = { [key: string]: string }`
+- property를 constructor에서 입력받지 않고, 수동으로 초기화 시킬 수 있다.
+  `private words: Words; constructor() { this.words = {} }`
+- 클래스를 타입처럼 사용할 수 있다.
+  `add(word: Word)` word라는 파라미터가 Word 클래스의 인스턴스이기를 원하면 이렇게 쓸 수 있다.
+
+타입으로 지정할 수 있는 것
+
+- 콘크리트 타입(string, number, boolean 등)
+- 제네릭
+- 클래스
+- 인터페이스
+
+## 4.2 인터페이스
+
+### readonly
+
+이전 코드에서는 Word 클래스의 인스턴스의 프로퍼티 값을 직접 변경할 수 있다는 문제가 있다.  
+Word 클래스의 프로퍼티는 Dict 클래스에서 사용해야 하기 때문에 public은 유지해야한다.  
+값을 보여주기만 하고 변경하지 못하게 하려면 readonly 키워드를 사용하면 된다.
+
+```tsx
+type Words = {
+  [key: string]: string;
+};
+
+class Dict {
+  protected words: Words;
+  constructor() {
+    this.words = {};
+  }
+  add(word: Word) {
+    const { term, def } = word;
+    if (this.words[term] === undefined) {
+      this.words[term] = def;
+    }
+  }
+  def(term: string) {
+    return this.words[term];
+  }
+}
+
+class Word {
+  constructor(
+    public readonly term: string, //
+    public readonly def: string //
+  ) {}
+}
+
+const kimchi = new Word("kimchi", "한국의음식");
+
+kimchi.def = "aaa"; // 에러: annot assign to 'def' because it is a read-only property.
+
+const dict = new Dict();
+dict.add(kimchi);
+dict.def("kimchi");
+```
+
+### static
+
+static은 typescript의 것이 아니다. javascript에도 있다.  
+Dict 클래스에 static hello()라는 메소드를 만들면, 클래스에서 바로 메소드를 실행시킬 수 있다. `Dict.hello()`
+
+### 타입
+
+- 오브젝트의 형태를 알려줄 수 있다. `type player = { nickname: string, team: string }`
+- 변수의 타입을 지정할 수 있다. alias 형태로도 사용할 수 있다. `type team = string`
+- 타입 배열을 지정할 수 있다. `type team = Array<string>`
+- 타입이 특정 값을 가지도록 제한할 수 있다.
+
+```tsx
+type Team = "red" | "blue" | "yellow";
+type Health = 1 | 5 | 10;
+
+type Player = {
+  nickname: string;
+  team: Team;
+  health: Health;
+};
+
+const ara: Player = {
+  nickname: "ara",
+  team: "red", // 값이 'red' | 'blue' | 'yellow' 로 제한된다
+  health: 1, // 값이 1 | 5 | 10 으로 제한된다
+};
+```
+
+### 인터페이스
+
+type 선언과 유사하다. type 선언에서 ‘=’ 기호만 제거된 형태이다.
+
+```tsx
+type Team = "red" | "blue" | "yellow";
+type Health = 1 | 5 | 10;
+
+interface Player {
+  //
+  nickname: string;
+  team: Team;
+  health: Health;
+}
+
+const ara: Player = {
+  nickname: "ara",
+  team: "red",
+  health: 1,
+};
+```
+
+타입은 내가 원하는 모든 것이 될 수 있다.  
+인터페이스는 오직 한가지 용도만을 가지고 있다. **오브젝트의 모양을 특정하는 것**이다.  
+react.js를 이용할 때 많이 사용할 것이다.
+
+### 정리
+
+- 타입스크립트에게 오브젝트 모양을 알려주는 방법에는 두 가지가 있다. 하나는 type을 쓰는 것이고, 다른 하나는 interface를 쓰는 것이다.
+- 차이점은 type 키워드는 interface 키워드에 비해 좀 더 활용할 수 있는게 많다.
+
+### 인터페이스의 특징
+
+인터페이스는 클래스와 닮았다. extends 키워드를 사용해서 상속할 수 있다.
+
+```tsx
+interface User {
+  name: string;
+}
+
+interface Player extends User {
+  //
+}
+
+const ara: Player = {
+  name: "ara",
+};
+```
+
+type도 상속할 수 있지만, 문법이 조금 다르다.
+
+```tsx
+type User = {
+  name: string;
+};
+
+type Player = User & {
+  //
+};
+
+const ara: Player = {
+  name: "ara",
+};
+```
+
+타입스크립트에게 오브젝트 모양을 알려줄 때, type과 interface를 사용한다.  
+interface의 문법이 객체지향 프로그래밍과 유사하기 때문에 개발자가(내가) 이해하기 쉽다.
+
+인터페이스의 또 다른 특징은 property들을 축적시킬 수 있다는 것이다.
+
+```tsx
+interface User {
+  name: string;
+}
+interface User {
+  lastName: string;
+}
+interface User {
+  health: number;
+}
+
+const ara: User = {
+  name: "ara",
+  lastName: "kim",
+  health: 1,
+};
+```
+
+인터페이스를 각각 만들면 타입스크립트가 알아서 하나로 합쳐준다.  
+이 것은 type으로는 할 수 없다.
+
+## 4.3 추상 클래스와 인터페이스
+
+추상화할 때, 클래스와 인터페이스의 차이를 알아보기 위해 추상화 클래스를 작성한다.
+
+```tsx
+abstract class User {
+  constructor(protected firstName: string, protected lastName: string) {}
+  abstract sayHi(name: string): string;
+  abstract fullName(): string;
+}
+
+class Player extends User {
+  fullName() {
+    return `${this.firstName} ${this.lastName}`;
+  }
+  sayHi(name: string) {
+    return `Hello, ${name}. My name is ${this.fullName}`;
+  }
+}
+```
+
+### 추상 클래스를 인터페이스로 변경하는 방법
+
+1. abstract class를 interface로 변경하고 User의 변수와 함수들을 key: value 형태로 정리해준다.
+2. Player 클래스에 extends 키워드를 제거하고 implements 키워드를 사용한다.
+   (자바스크립트로 변환 시, extends 키워드는 유지되지만 implements 키워드는 타입스크립트에서만 있는 개념이라 제거된다.)
+
+```tsx
+interface User {
+  firstName: string;
+  lastName: string;
+  sayHi(name: string): string;
+  fullName(): string;
+}
+
+class Player implements User {
+  // Player에서 에러
+}
+```
+
+- Class 'Player' incorrectly implements interface 'User'.
+- Type 'Player' is missing the following properties from type 'User': firstName, lastName, sayHi, fullName
+
+1. interface를 구성하고 있는 변수와 함수들을 만들어준다.
+   constructor에 정의하는 함수는 public이어야 한다. private나 protected로 하면 User에서는 그 타입이 아니라는 에러 메시지가 나온다.
+   (Property 'firstName' is private in type 'Player' but not in type 'User'.)
+
+```tsx
+interface User {
+  firstName: string;
+  lastName: string;
+  sayHi(name: string): string;
+  fullName(): string;
+}
+
+class Player implements User {
+  constructor(public firstName: string, public lastName: string) {}
+  fullName() {
+    return `${this.firstName} ${this.lastName}`;
+  }
+  sayHi(name: string) {
+    return `Hello, ${name}. My name is ${this.fullName}`;
+  }
+}
+```
+
+### 추상 클래스와 인터페이스의 차이
+
+추상 클래스로 User를 정의하면 자바스크립트로 변환될 때 class가 생성된다. 인터페이스는 타입스크립트에서만 사용되고, 자바스크립트로 변환 시 class가 되지 않는다.
+
+인터페이스 사용의 이점
+
+- 클래스의 모양을 알려주기에 유용하다.(추상 클래스 대신 사용할 수 있다)
+- 자바스크립트로 변환 시 코드가 남지 않아 파일 사이즈를 줄일 수 있다.
+
+인터페이스의 문제점
+
+- private property들을 사용하지 못한다.
+- constructor가 없어서 변수를 초기화 및 할당 해줄 수 없다.
+
+인터페이스의 유용한 점은 하나 이상의 인터페이스를 동시에 상속할 수 있다는 것이다.
+
+```tsx
+interface User {
+  firstName: string;
+  lastName: string;
+  sayHi(name: string): string;
+  fullName(): string;
+}
+interface Human {
+  //
+  health: number;
+}
+
+class Player implements User, Human {
+  //
+  constructor(
+    public firstName: string,
+    public lastName: string,
+    public health: number //
+  ) {}
+  fullName() {
+    return `${this.firstName} ${this.lastName}`;
+  }
+  sayHi(name: string) {
+    return `Hello, ${name}. My name is ${this.fullName}`;
+  }
+}
+```
+
+어댑터 패턴을 만드는 일을 한다면, 인터페이스를 만들어주고 팀원이 원하는 각자의 방식으로 클래스를 상속하도록 할 수 있다.  
+인터페이스는 클래스가 아니지만 클래스의 모양을 특정 짓는다.
+
+인터페이스틑 타입으로도 쓸 수 있다.
+
+```tsx
+function makrUser(user: User) {
+    return 'hi'
+}
+makeUser({
+	firstName: 'ara',
+	lastName: 'kim',
+	fullName: () => 'aaa',
+	sayHi: (name) => 'hi'
+}
+```
+
+## 4.4 인터페이스와 타입, 그리고 인터페이스와 클래스
+
+### 목표
+
+인터페이스와 타입은 타입스크립트에게 오브젝트의 모양과 타입을 알려주는게 목표다.
+
+```tsx
+// type
+type PlayerA = {
+  name: string;
+};
+const playerA: PlayerA = {
+  name: "ara",
+};
+
+// interface
+interface PlayerB {
+  name: string;
+}
+const playerB: PlayerB = {
+  name: "ara",
+};
+```
+
+목표는 동일하지만, 쓰임새가 다르다.
+
+### 상속
+
+type은 프로퍼티를 나중에 추가하고 싶을 때, 사용할 수 없다.
+
+```tsx
+// type
+type PlayerA = {
+  name: string;
+};
+type playerAA = PlayerA & {
+  lastName: string;
+};
+type playerAA = {
+  // 에러: Duplicate identifier 'playerAA'.
+  health: number;
+};
+const playerA: playerAA = {
+  name: "ara",
+  lastName: "kim",
+};
+
+// interface
+interface PlayerB {
+  name: string;
+}
+interface PlayerBB extends PlayerB {
+  lastName: string;
+}
+interface PlayerBB {
+  //
+  health: number;
+}
+const playerB: PlayerBB = {
+  name: "ara",
+  lastName: "kim",
+  health: 1, //
+};
+```
+
+인터페이스는 동일한 이름으로 지정하면 프로퍼티가 중첩 된다.
+
+```tsx
+interface PlayerB {
+  name: string;
+}
+interface PlayerB {
+  lastName: string;
+}
+interface PlayerB {
+  health: number;
+}
+const playerB: PlayerB = {
+  name: "ara",
+  lastName: "kim",
+  health: 1,
+};
+```
+
+타입과 인터페이스는 추상 클래스를 대체해서 사용할 수 있다.
+
+```tsx
+// type
+type PlayerA = {
+  firstName: string;
+};
+
+// interface
+interface PlayerB {
+  firstName: string;
+}
+
+class User implements PlayerA {
+  // PlayerA 자리에 PlayerB가 들어갈 수도 있다.
+  constructor(public firstName: string) {}
+}
+```
+
+타입스크립트 커뮤니티에서는 클래스나 오브젝트 모양을 정의하고 싶으면 interface를 사용하고, 다른 모든 경우에서는 타입을 쓰라고 한다.
+
+그리고 타입스크립트를 생성해주는 큰 프로젝트를 해보면, 대부분은 인터페이스를 만들어서 준다. 인터페이스를 상속시키는 방법이 직관적이어서 인 것 같다. 적기만 하면 수많은 인터페이스 정의를 합칠 수 있기 때문이다.  
+타입 alias나 특정 값으로 타입을 제한하는 경우에는 타입을 쓸 수 있다.
+
+공식 문서에서는 이렇게 나와있다.
+
+- 타입과 인터페이스는 유사하다.
+- 타입과 인터페이스의 선택은 자유다.
+- 인터페이스의 거의 모든 기능이 타입에도 있다.
+- 가장 눈에 띄는 차이점은 타입은 새 property를 추가하기 위해 다시 선언될 수 없지만 인터페이스는 항상 상속이 가능하다.
+
+## 4.5 다형성(제네릭, 다형성, 인터페이스 합치기)
+
+다형성은 다양한 형태의 코드를 가질 수 있도록 하는 것이다. 같은 코드를 다른 타입으로 사용할 수 있다.  
+제네릭을 사용해서 구현할 수 있다.
+
+### 로컬스토리지 API와 비슷한 API 만들기
+
+아래 코드를 작성하고 Storage에 마우스를 올린다.
+
+```tsx
+interface Storage {}
+```
+
+‘This Web Storage API interface provides access to a particular domain's session or local storage. It allows, for example, the addition, modification, or deletion of stored data items.’ 메시지가 보인다.
+
+Storage는 타입스크립트에 의해 이미 선언된 자바스크립트의 Web Storage API를 위한 인터페이스다. Storage를 그대로 사용하면 기존에 있는 것에 property를 추가하게 되므로 다른 이름으로 만들어서 사용한다.
+
+타입스크립트에게 LocalStorage에 T라고 불리는 제네릭을 받을 계획이라고 알려준다.
+
+```tsx
+interface SStorage<T> {
+  [key: string]: T;
+}
+class LocalStorage<T> {
+  private storage: SStorage<T> = {};
+}
+```
+
+T는 인터페이스인 SStorage에 물려줄 수 있다.
+
+set, remove, get, clear 메소드를 구현한다.
+
+```tsx
+interface SStorage<T> {
+  [key: string]: T;
+}
+class LocalStorage<T> {
+  private storage: SStorage<T> = {};
+  set(key: string, value: T) {
+    this.storage[key] = value;
+  }
+  remove(key: string) {
+    delete this.storage[key];
+  }
+  get(key: string): T {
+    return this.storage[key];
+  }
+  clear() {
+    this.storage = {};
+  }
+}
+```
+
+LocalStorage를 사용해본다.
+
+```tsx
+const stringsStorage = new LocalStorage<string>();
+stringsStorage.get();
+```
+
+get을 입력하고 괄호를 열면 타입 힌트가 `get(**key: string**): string`로 나타난다.  
+타입스크립트가 제네릭을 바탕으로 call signture를 만들어 준 것이다. get의 return 타입을 T로 정의했고, 실행 시점에 string으로 인식해서 return 타입이 string이 된 것을 볼 수 있다.
+
+string 뿐만 아니라 boolean 타입과 같은 다른 타입들을 사용할 수도 있다.
+
+```tsx
+const booleanStorage = new LocalStorage<boolean>();
+booleanStorage.get("aaa");
+```
+
+### 정리
+
+- 제네릭, 클래스, 인터페이스로 다형성을 만들 수 있다. (여러 타입에 사용할 수 있는 기능을 구현할 수 있다.)
+- 제네릭은 하위 레벨에 전달할 수 있다.
